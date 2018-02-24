@@ -1,7 +1,7 @@
-DClient
+d'Client
 ====
 
-An minimal experimental JSON API client.
+d'Client is a minimal experimental JSON API client for Drupal.
 
 ### Features:
 - Zero-configuration
