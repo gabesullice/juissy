@@ -114,7 +114,7 @@ export default class DrupalClient {
       this.links
         .then(links => {
           if (!links.hasOwnProperty(type)) {
-            reject(`'${type}' is not a valid URL for ${this.baseUrl}.`);
+            reject(`'${type}' is not a valid type for ${this.baseUrl}.`);
           }
           resolve(links[type]);
         })
