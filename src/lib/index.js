@@ -1,5 +1,4 @@
 export default class DrupalClient {
-
   constructor(baseUrl, logger) {
     this.baseUrl = baseUrl;
     this.logger = logger;
@@ -63,25 +62,27 @@ export default class DrupalClient {
       })();
 
       return {
-        forEach: function (g) {
+        forEach: function(g) {
           return new Promise((resolve, reject) => {
-            const f = (next) => {
+            const f = next => {
               if (next) {
-                next.then(resource => {
-                  count++;
-                  if (resource) g(resource);
-                  f((max === -1 || count < max) ? cursor.next().value : false);
-                }).catch(reject);
+                next
+                  .then(resource => {
+                    count++;
+                    if (resource) g(resource);
+                    f(max === -1 || count < max ? cursor.next().value : false);
+                  })
+                  .catch(reject);
               } else {
                 const addMore = (many = -1) => {
-                  return (many === -1)
-                    ? (max = -1)
-                    : (max += many);
+                  return many === -1 ? (max = -1) : (max += many);
                 };
-                resolve((collection.length || inFlight.size || link) ? addMore : false);
+                resolve(
+                  collection.length || inFlight.size || link ? addMore : false,
+                );
               }
             };
-            f((max === -1 || count < max) ? cursor.next().value : false);
+            f(max === -1 || count < max ? cursor.next().value : false);
           });
         },
       };

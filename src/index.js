@@ -2,22 +2,20 @@ import DClient from './lib';
 
 const client = new DClient('http://jsonapi.test:8080', console);
 
-const logger = (label) => {
+const logger = label => {
   return resource => console.log(`${label}:`, resource.attributes.title);
 };
 
-client.all('node--recipe', { max: 3, sort: 'title' })
+client
+  .all('node--recipe', { max: 3, sort: 'title' })
   .then(cursor => {
-    return cursor
-      .forEach(logger('Initial'))
-      .then(more => {
-        console.log(`There are ${more ? 'more' : 'no more'} resources!`);
-        more(10);
-        cursor.forEach(logger('Additional'))
-          .then(evenMore => {
-            console.log(`There are ${evenMore ? 'more' : 'no more'} resources!`);
-          });
+    return cursor.forEach(logger('Initial')).then(more => {
+      console.log(`There are ${more ? 'more' : 'no more'} resources!`);
+      more(10);
+      cursor.forEach(logger('Additional')).then(evenMore => {
+        console.log(`There are ${evenMore ? 'more' : 'no more'} resources!`);
       });
+    });
   })
   .catch(error => console.log('Error:', error));
 
