@@ -1,3 +1,5 @@
+import Filter from './filters.js';
+
 export default class DrupalClient {
   constructor(baseUrl, logger) {
     this.baseUrl = baseUrl;
@@ -22,11 +24,14 @@ export default class DrupalClient {
       });
   }
 
-  all(type, { max = -1, sort = '', filter = 'page[limit]=2' } = {}) {
+  all(type, { max = -1, sort = '', filter = '' } = {}) {
     return this.withLink(type).then(baseLink => {
-      var link = `${baseLink}?${filter}`;
+      var link = `${baseLink}`;
+      if (filter.length) {
+        link += `?${filter}`;
+      }
       if (sort.length) {
-        link += `&sort=${sort}`;
+        link += `${filter.length ? '&' : '?'}sort=${sort}`;
       }
       var collectionRequests = [];
       var collection = [];
@@ -121,4 +126,9 @@ export default class DrupalClient {
         .catch(reject);
     });
   }
+
+  filter(f) {
+    return new Filter(f);
+  }
+
 }
