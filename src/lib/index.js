@@ -35,18 +35,21 @@ export default class DrupalClient {
       }
       var collectionRequests = [];
       var collection = [];
+      var resourceCount = 0;
       const inFlight = new Set([]);
       const doRequest = nextLink => {
         inFlight.add(nextLink);
         return this.fetchDocument(nextLink).then(doc => {
           inFlight.delete(nextLink);
           link = doc.links.next || false;
-          collection.push(...(this.documentData(doc) || []));
+          var resources = this.documentData(doc);
+          resourceCount += (resources) ? resources.length : 0;
+          collection.push(...(resources || []));
           return Promise.resolve(collection);
         });
       };
       const advance = () => {
-        if (link && !inFlight.has(link)) {
+        if (link && !inFlight.has(link) && (max === -1 || resourceCount < max)) {
           collectionRequests.push(doRequest(link));
         }
         if (!collection.length && collectionRequests.length) {
