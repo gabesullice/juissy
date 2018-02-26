@@ -71,21 +71,23 @@ Additional: Watercress soup
 There are no more resources!
 ```
 
-If we were to add a custom filter, we would do so like this:
+If we want to add a custom filter, we would do so like this:
 ```js
-// `client.filter` receives a function with is passed all the components of a
+// `client.filter` receives a function that is passed all the components of a
 // query builder.
 const filter = client.filter((c, and, or, param) => {
-  // You can build `and` groups like so:
-  return and(
+  // Use the `and` and `or` function to build groups.
     // `c` is a shorthand for `c.eq`.
+    // Nested groups are perfectly fine.
+      // You can express other operators by calling methods on `c`.
+      // You can 'parameterize' your queries with the param method.
+      // You can even parameterize your operators!
+  return and(
     c('status', 1),
-    // Nested groups are simple.
     or(
-      // You can express other operators like so:
       c.startsWith('title', 'Thai'),
-      // You can 'parameterize your queries with the param method.
-      c.contains('title', param('paramOne')),
+      c.contains('title', param('myValueParam')),
+      c.condition('title', 'chocolate', param('myOperatorParam')),
     ),
   );
 });
@@ -95,6 +97,9 @@ const options = {
   sort: 'title',
 
   // `compile` will build a filter query string and replace your parameters.
-  filter: filter.compile({paramOne: 'easy'}),
+  filter: filter.compile({
+    myValueParam: 'easy',
+    myOperatorParam: '<>',
+  }),
 };
 ```
