@@ -6,6 +6,7 @@ d'Client is a minimal experimental JSON API client for Drupal.
 ### Features:
 - Zero-configuration
 - Automatic pagination
+- Late-binding filter compiler
 - ???
 
 ### Example:
@@ -68,4 +69,32 @@ Additional: Vegan chocolate brownies
 Additional: Victoria sponge cake
 Additional: Watercress soup
 There are no more resources!
+```
+
+If we were to add a custom filter, we would do so like this:
+```js
+// `client.filter` receives a function with is passed all the components of a
+// query builder.
+const filter = client.filter((c, and, or, param) => {
+  // You can build `and` groups like so:
+  return and(
+    // `c` is a shorthand for `c.eq`.
+    c('status', 1),
+    // Nested groups are simple.
+    or(
+      // You can express other operators like so:
+      c.startsWith('title', 'Thai'),
+      // You can 'parameterize your queries with the param method.
+      c.contains('title', param('paramOne')),
+    ),
+  );
+});
+
+const options = {
+  max: 3,
+  sort: 'title',
+
+  // `compile` will build a filter query string and replace your parameters.
+  filter: filter.compile({paramOne: 'easy'}),
+};
 ```

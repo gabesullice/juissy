@@ -7,7 +7,10 @@ const logger = label => {
 };
 
 const filter = client.filter((c, and, or, param) => {
-  return and(c('status', 1), or(c.contains('title', param('paramOne')), c.startsWith('title', 'Thai')))
+  return and(
+    c('status', 1),
+    or(c.contains('title', param('paramOne')), c.startsWith('title', 'Thai')),
+  );
 });
 
 const options = {
