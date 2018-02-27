@@ -14,39 +14,38 @@ d'Client is a minimal experimental JSON API client for Drupal.
 // A client only needs a base URL. It doesn't need to know anything else!
 const client = new DClient('http://jsonapi.test:8080');
 
+// It's best to read the code beneath these comments, then fill in your gaps in
+// understading with these comments.
+
 // `client.all()` returns a Promise. You may specify a max number of resource to
 // retrieve, sorting rules, and filters too! If no maximum is given the client
 // will *lazily* resolve every resource on the server!
-client.all('node--recipe', { max: 3, sort: 'title' })
-
   // The Promise returned by `client.all()` resolves to a cursor.
-  .then(cursor => {
-
     // You "consume" resources by specifing a function to run for every resolved
     // resource. This will run for every resource up to the given maximum or
     // until there are no more resources available.
-    return cursor.forEach(print('Initial'))
-
       // `forEach` itself returns a Promise that will resolve to either a
       // function or `false` if there are no more resources available.
+          // The `more` function lets you increase the number of resources to be
+          // resolved.
+          // Once the maximum has been increased, you may consume the additional
+          // resources.
+            // While the second `forEach` call is "nested" here for the sake of
+            // example, you need not do the same. Just take care that `forEach` is not called again before the first `forEach` has
+            // completed.
+
+client.all('node--recipe', { max: 3, sort: 'title' })
+  .then(cursor => {
+    return cursor.forEach(print('Initial'))
       .then(more => {
         console.log(`There are ${more ? 'more' : 'no more'} resources!`);
         if (more) {
-
-          // The `more` function lets you increase the number of resources to be
-          // resolved.
           more(10);
-
-          // Once the maximum has been increased, you may consume the additional
-          // resources.
-          cursor.forEach(print('Additional'))
+          cursor
+            .forEach(print('Additional'))
             .then(evenMore => {
               console.log(`There are ${evenMore ? 'more' : 'no more'} resources!`);
             });
-
-          // While the second `forEach` call is "nested" here for the sake of
-          // example, you need not do the same. Just take care that `forEach`
-          // is not called again before the first `forEach` has completed.
         }
       });
   })
