@@ -24,7 +24,7 @@ export default class DrupalClient {
       });
   }
 
-  all(type, { max = -1, sort = '', filter = '' } = {}) {
+  all(type, { limit = -1, sort = '', filter = '' } = {}) {
     return this.withLink(type).then(baseLink => {
       var link = `${baseLink}`;
       if (filter.length) {
@@ -32,11 +32,13 @@ export default class DrupalClient {
       }
       if (sort.length) {
         link += `${filter.length ? '&' : '?'}sort=${sort}`;
+        link += `&page[limit]=2`;
       }
-      var collectionRequests = [];
-      var collection = [];
+
+      var buffer = [];
       var resourceCount = 0;
       const inFlight = new Set([]);
+
       const doRequest = nextLink => {
         inFlight.add(nextLink);
         return this.fetchDocument(nextLink).then(doc => {
@@ -44,57 +46,60 @@ export default class DrupalClient {
           link = doc.links.next || false;
           var resources = this.documentData(doc);
           resourceCount += (resources) ? resources.length : 0;
-          collection.push(...(resources || []));
-          return Promise.resolve(collection);
+          buffer.push(...(resources || []));
+          return Promise.resolve(buffer);
         });
       };
+
+      var collectionRequests = [];
       const advance = () => {
-        if (link && !inFlight.has(link) && (max === -1 || resourceCount < max)) {
+        if (link && !inFlight.has(link) && (limit === -1 || resourceCount < limit)) {
           collectionRequests.push(doRequest(link));
         }
-        if (!collection.length && collectionRequests.length) {
-          return collectionRequests.shift();
-        } else {
-          return Promise.resolve(collection);
-        }
+        return !buffer.length && collectionRequests.length
+          ? collectionRequests.shift().then(() => buffer)
+          : Promise.resolve(buffer);
       };
 
       var count = 0;
       const cursor = (function*() {
-        while (collection.length || inFlight.size || link) {
-          yield advance().then(view => {
-            const resource = view.shift();
+        while (buffer.length || inFlight.size || link) {
+          yield limit === -1 || count < limit ? advance().then(buffer => {
+            count++
+            const resource = buffer.shift();
             return resource || null;
-          });
+          }) : false;
         }
       })();
+      cursor.canContinue = () => buffer.length || inFlight.size || link;
+      cursor.addMore = (many = -1) => many === -1 ? (limit = -1) : (limit += many);
 
-      return {
-        forEach: function(g) {
-          return new Promise((resolve, reject) => {
-            const f = next => {
-              if (next) {
-                next
-                  .then(resource => {
-                    count++;
-                    if (resource) g(resource);
-                    f(max === -1 || count < max ? cursor.next().value : false);
-                  })
-                  .catch(reject);
-              } else {
-                const addMore = (many = -1) => {
-                  return many === -1 ? (max = -1) : (max += many);
-                };
-                resolve(
-                  collection.length || inFlight.size || link ? addMore : false,
-                );
-              }
-            };
-            f(max === -1 || count < max ? cursor.next().value : false);
-          });
-        },
-      };
+      return this.toStream(cursor);
     });
+  }
+
+  toStream(cursor) {
+    return {
+      subscribe: function(g) {
+        return new Promise((resolve, reject) => {
+          const f = next => {
+            if (next) {
+              next
+                .then(resource => {
+                  if (resource) g(resource);
+                  f(cursor.next().value);
+                })
+                .catch(reject);
+            } else {
+              resolve(
+                cursor.canContinue() ? cursor.addMore : false,
+              );
+            }
+          };
+          f(cursor.next().value);
+        });
+      },
+    };
   }
 
   fetchDocument(url) {

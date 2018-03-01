@@ -14,19 +14,19 @@ const filter = client.filter((c, and, or, param) => {
 });
 
 const options = {
-  max: 3,
+  limit: 3,
   sort: 'title',
   //filter: filter.compile({paramOne: 'easy'}),
 };
 
 client
   .all('node--recipe', options)
-  .then(cursor => {
-    return cursor.forEach(logger('Initial')).then(more => {
+  .then(stream => {
+    return stream.subscribe(logger('Initial')).then(more => {
       console.log(`There are ${more ? 'more' : 'no more'} resources!`);
       if (more) {
-        more(2);
-        cursor.forEach(logger('Additional')).then(evenMore => {
+        more(20);
+        stream.subscribe(logger('Additional')).then(evenMore => {
           console.log(`There are ${evenMore ? 'more' : 'no more'} resources!`);
         });
       }
