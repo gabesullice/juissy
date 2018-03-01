@@ -74,13 +74,13 @@ export default class DrupalClient {
       cursor.canContinue = () => buffer.length || inFlight.size || link;
       cursor.addMore = (many = -1) => many === -1 ? (limit = -1) : (limit += many);
 
-      return this.toStream(cursor);
+      return this.toConsumer(cursor);
     });
   }
 
-  toStream(cursor) {
+  toConsumer(cursor) {
     return {
-      subscribe: function(g) {
+      consume: function(g) {
         return new Promise((resolve, reject) => {
           const f = next => {
             if (next) {

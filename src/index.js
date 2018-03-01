@@ -21,12 +21,12 @@ const options = {
 
 client
   .all('node--recipe', options)
-  .then(stream => {
-    return stream.subscribe(logger('Initial')).then(more => {
+  .then(cursor => {
+    return cursor.consume(logger('Initial')).then(more => {
       console.log(`There are ${more ? 'more' : 'no more'} resources!`);
       if (more) {
         more(20);
-        stream.subscribe(logger('Additional')).then(evenMore => {
+        cursor.consume(logger('Additional')).then(evenMore => {
           console.log(`There are ${evenMore ? 'more' : 'no more'} resources!`);
         });
       }

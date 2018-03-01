@@ -20,29 +20,29 @@ const client = new DClient('http://jsonapi.test:8080');
 // `client.all()` returns a Promise. You may specify a limit for number of
 // resources to retrieve, sorting rules, and filters too! If no limit is given
 // the client will *lazily* resolve every resource on the server!
-  // The Promise returned by `client.all()` resolves to a stream.
+  // The Promise returned by `client.all()` resolves to a cursor.
     // You "consume" resources by specifing a function to run for every resolved
     // resource. This will run for every resource up to the given maximum or
     // until there are no more resources available.
-      // `subscribe` itself returns a Promise that will resolve to either a
+      // `consume` itself returns a Promise that will resolve to either a
       // function or `false` if there are no more resources available.
           // The `more` function lets you increase the number of resources to be
           // resolved.
           // Once the maximum has been increased, you may consume the additional
           // resources.
-            // While the second `subscribe` call is "nested" here for the sake of
-            // example, you need not do the same. Just take care that `subscribe` is not called again before the first `subscribe` has
-            // completed.
+            // While the second `consume` call is "nested" here for the sake of
+            // example, you need not do the same. Just take care that `consume`
+            // is not called again before the first `consume` has completed.
 
 client.all('node--recipe', { limit: 3, sort: 'title' })
-  .then(stream => {
-    return stream.subscribe(print('Initial'))
+  .then(cursor => {
+    return cursor.consume(print('Initial'))
       .then(more => {
         console.log(`There are ${more ? 'more' : 'no more'} resources!`);
         if (more) {
           more(10);
-          stream
-            .subscribe(print('Additional'))
+          cursor
+            .consume(print('Additional'))
             .then(evenMore => {
               console.log(`There are ${evenMore ? 'more' : 'no more'} resources!`);
             });
