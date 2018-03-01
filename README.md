@@ -21,9 +21,9 @@ const client = new DClient('http://jsonapi.test:8080');
 // resources to retrieve, sorting rules, and filters too! If no limit is given
 // the client will *lazily* resolve every resource on the server!
   // The Promise returned by `client.all()` resolves to a feed.
-    // You "consume" resources by specifing a function to run for every resolved
-    // resource. This will run for every resource up to the given maximum or
-    // until there are no more resources available.
+    // You "consume" resources by specifying a function to run for every
+    // resolved resource. This will run for every resource up to the given
+    // maximum or until there are no more resources available.
       // `consume` itself returns a Promise that will resolve to either a
       // function or `false` if there are no more resources available.
           // The `more` function lets you increase the number of resources to be
