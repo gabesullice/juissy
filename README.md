@@ -20,7 +20,7 @@ const client = new DClient('http://jsonapi.test:8080');
 // `client.all()` returns a Promise. You may specify a limit for number of
 // resources to retrieve, sorting rules, and filters too! If no limit is given
 // the client will *lazily* resolve every resource on the server!
-  // The Promise returned by `client.all()` resolves to a cursor.
+  // The Promise returned by `client.all()` resolves to a feed.
     // You "consume" resources by specifing a function to run for every resolved
     // resource. This will run for every resource up to the given maximum or
     // until there are no more resources available.
@@ -35,13 +35,13 @@ const client = new DClient('http://jsonapi.test:8080');
             // is not called again before the first `consume` has completed.
 
 client.all('node--recipe', { limit: 3, sort: 'title' })
-  .then(cursor => {
-    return cursor.consume(print('Initial'))
+  .then(feed => {
+    return feed.consume(print('Initial'))
       .then(more => {
         console.log(`There are ${more ? 'more' : 'no more'} resources!`);
         if (more) {
           more(10);
-          cursor
+          feed
             .consume(print('Additional'))
             .then(evenMore => {
               console.log(`There are ${evenMore ? 'more' : 'no more'} resources!`);
