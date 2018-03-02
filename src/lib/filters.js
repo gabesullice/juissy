@@ -1,7 +1,7 @@
 export default class Filter {
 
   constructor(f) {
-    this.conditions = f(Conditions, Groups.and, Groups.or, (key) => (parameters) => parameters[key]);
+    this.conditions = f(Conditions, (key) => (parameters) => parameters[key]);
   }
 
   compile(parameters) {
@@ -62,6 +62,10 @@ const Groups = {
 const Conditions = function (f, v) {
   return Conditions.eq(f, v);
 }
+
+Conditions.and = Groups.and;
+
+Conditions.or = Groups.or;
 
 Conditions.eq = (f, v) => {
   return Conditions.condition(f, v, '=');
