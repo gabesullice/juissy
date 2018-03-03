@@ -1,7 +1,8 @@
 import Filter from './filters.js';
 
 export default class DrupalClient {
-  constructor(baseUrl, logger) {
+
+  constructor(baseUrl, logger = console) {
     this.baseUrl = baseUrl;
     this.logger = logger;
     this.links = new Promise((resolve, reject) => {
@@ -14,79 +15,68 @@ export default class DrupalClient {
     });
   }
 
-  get(type, id) {
-    return this.withLink(type)
-      .then(link => this.fetchDocument(`${link}/${id}`))
-      .then(doc => this.documentData(doc))
-      .catch(err => {
-        this.logger.log(err);
-        return null;
+  async get(type, id) {
+    const link = `${await this.getLink(type)}/${id}`;
+    return this.documentData(await this.fetchDocument(link));
+  }
+
+  async all(type, { limit = -1, sort = '', filter = '', relationships = null} = {}) {
+    let link = await this.collectionLink(type, {sort, filter, page: 'page[limit]=2'});
+    return this.toConsumer(this.paginate(link, limit), relationships);
+  }
+
+  paginate(link, limit) {
+    var buffer = [];
+    var resourceCount = 0;
+    const inFlight = new Set([]);
+
+    const doRequest = nextLink => {
+      inFlight.add(nextLink);
+      return this.fetchDocument(nextLink).then(doc => {
+        inFlight.delete(nextLink);
+        link = doc.links.next || false;
+        var resources = this.documentData(doc);
+        resourceCount += (resources) ? resources.length : 0;
+        buffer.push(...(resources || []));
+        return Promise.resolve(buffer);
       });
+    };
+
+    var collectionRequests = [];
+    const advance = () => {
+      if (link && !inFlight.has(link) && (limit === -1 || resourceCount < limit)) {
+        collectionRequests.push(doRequest(link));
+      }
+      return !buffer.length && collectionRequests.length
+        ? collectionRequests.shift().then(() => buffer)
+        : Promise.resolve(buffer);
+    };
+
+    const cursor = (function*() {
+      while (buffer.length || inFlight.size || link) {
+        yield limit === -1 || resourceCount < limit ? advance().then(buffer => {
+          const resource = buffer.shift();
+          return resource || null;
+        }) : false;
+      }
+    })();
+    cursor.canContinue = () => buffer.length || inFlight.size || link;
+    cursor.addMore = (many = -1) => many === -1 ? (limit = -1) : (limit += many);
+
+    return cursor;
   }
 
-  all(type, { limit = -1, sort = '', filter = '' } = {}) {
-    return this.withLink(type).then(baseLink => {
-      var link = `${baseLink}`;
-      if (filter.length) {
-        link += `?${filter}`;
-      }
-      if (sort.length) {
-        link += `${filter.length ? '&' : '?'}sort=${sort}`;
-        link += `&page[limit]=2`;
-      }
-
-      var buffer = [];
-      var resourceCount = 0;
-      const inFlight = new Set([]);
-
-      const doRequest = nextLink => {
-        inFlight.add(nextLink);
-        return this.fetchDocument(nextLink).then(doc => {
-          inFlight.delete(nextLink);
-          link = doc.links.next || false;
-          var resources = this.documentData(doc);
-          resourceCount += (resources) ? resources.length : 0;
-          buffer.push(...(resources || []));
-          return Promise.resolve(buffer);
-        });
-      };
-
-      var collectionRequests = [];
-      const advance = () => {
-        if (link && !inFlight.has(link) && (limit === -1 || resourceCount < limit)) {
-          collectionRequests.push(doRequest(link));
-        }
-        return !buffer.length && collectionRequests.length
-          ? collectionRequests.shift().then(() => buffer)
-          : Promise.resolve(buffer);
-      };
-
-      var count = 0;
-      const cursor = (function*() {
-        while (buffer.length || inFlight.size || link) {
-          yield limit === -1 || count < limit ? advance().then(buffer => {
-            count++
-            const resource = buffer.shift();
-            return resource || null;
-          }) : false;
-        }
-      })();
-      cursor.canContinue = () => buffer.length || inFlight.size || link;
-      cursor.addMore = (many = -1) => many === -1 ? (limit = -1) : (limit += many);
-
-      return this.toConsumer(cursor);
-    });
-  }
-
-  toConsumer(cursor) {
+  toConsumer(cursor, relationships = null) {
+    const self = this;
     return {
-      consume: function(g) {
+      consume: function(consumer) {
+        const decoratedConsumer = self.decorateWithRelationships(consumer, relationships);
         return new Promise((resolve, reject) => {
           const f = next => {
             if (next) {
               next
                 .then(resource => {
-                  if (resource) g(resource);
+                  decoratedConsumer(resource);
                   f(cursor.next().value);
                 })
                 .catch(reject);
@@ -99,6 +89,28 @@ export default class DrupalClient {
           f(cursor.next().value);
         });
       },
+    };
+  }
+
+  decorateWithRelationships(consumer, relationships = null) {
+    const decorated = !relationships
+      ? consumer
+      : resource => {
+        const mirror = {};
+        Object.getOwnPropertyNames(relationships).forEach(relationship => {
+          const target = typeof relationships[relationship] === 'string'
+            ? {field: relationships[relationship]}
+            : relationship;
+          let path = [], link;
+          mirror[relationship] = (link = extractValue(`relationships.${target.field}.links.related`, resource))
+            ? this.toConsumer(this.paginate(link, target.limit || -1))
+            : Promise.reject();
+        });
+        consumer(resource, mirror);
+      };
+    return resource => {
+      // Only call the consumer with non-null values.
+      if (resource) decorated(resource);
     };
   }
 
@@ -122,16 +134,12 @@ export default class DrupalClient {
     }
   }
 
-  withLink(type) {
-    return new Promise((resolve, reject) => {
-      this.links
-        .then(links => {
-          if (!links.hasOwnProperty(type)) {
-            reject(`'${type}' is not a valid type for ${this.baseUrl}.`);
-          }
-          resolve(links[type]);
-        })
-        .catch(reject);
+  getLink(type) {
+    return this.links.then(links => {
+      if (!links.hasOwnProperty(type)) {
+        Promise.reject(`'${type}' is not a valid type for ${this.baseUrl}.`);
+      }
+      return links[type];
     });
   }
 
@@ -139,4 +147,16 @@ export default class DrupalClient {
     return new Filter(f);
   }
 
+  async collectionLink(type, {sort, filter, page} = {}) {
+    let query = '';
+    query += filter.length ? `?${filter}` : '';
+    query += sort.length ? `${query.length ? '&' : '?'}sort=${sort}` : '';
+    query += page.length ? `${query.length ? '&' : '?'}${page}` : '';
+    return `${await this.getLink(type)}${query}`;
+  }
+
+}
+
+function extractValue(path, obj) {
+  return path.split('.').reduce((exists, part) => exists && exists.hasOwnProperty(part) ? exists[part] : false, obj);
 }
