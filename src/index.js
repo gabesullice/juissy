@@ -1,13 +1,12 @@
 import DClient from './lib';
 
-const client = new DClient('http://jsonapi.test:8080', {
+const client = new DClient('https://jsonapi.test', {
   authorization: `Basic ${btoa('root:root')}`,
 });
 
 (async () => {
   const options = {
-    limit: 3,
-    sort: 'title',
+    sort: '-title',
     relationships: {
       tags: {
         field: 'field_tags',
@@ -18,12 +17,7 @@ const client = new DClient('http://jsonapi.test:8080', {
     }
   };
   //options.filter = filter.compile({paramOne: 'easy'});
-  const feed = await client.all('node--recipe', options);
-  let next = await feed.consume(logRecipe('Initial'));
-  while (next) {
-    next(options.limit);
-    next = await feed.consume(logRecipe('Subsequent'))
-  }
+  (await client.all('node--recipe', options)).consume(logRecipe('Initial'));
 })()
 
 const filter = client.filter((c, param) => {

@@ -6,14 +6,6 @@ export default class DrupalClient {
     this.baseUrl = baseUrl;
     this.logger = logger;
     this.authorization = authorization;
-    this.links = new Promise((resolve, reject) => {
-      this.fetchDocument(`${baseUrl}/jsonapi`)
-        .then(doc => resolve(doc.links || {}))
-        .catch(err => {
-          this.logger.log('Unable to resolve resource links.');
-          reject(err);
-        });
-    });
   }
 
   async get(type, id) {
@@ -50,9 +42,21 @@ export default class DrupalClient {
     var total = 0;
     const inFlight = new Set([]);
 
+    const headers = {};
+    if (relationships) {
+      //&& relationships.tags && relationships.tags.field === 'field_tags') {
+      const paths = [];
+      Object.getOwnPropertyNames(relationships).forEach(name => {
+        paths.push(`.data.[].relationships.${relationships[name].field}.links.related`);
+      });
+      if (paths.length) {
+        headers['x-push-please'] = paths.join('; ');
+      }
+    }
+
     const doRequest = nextLink => {
       inFlight.add(nextLink);
-      return this.fetchDocument(nextLink).then(doc => {
+      return this.fetchDocument(nextLink, headers).then(doc => {
         inFlight.delete(nextLink);
         link = doc.links.next || false;
         const data = this.documentData(doc);
@@ -106,26 +110,18 @@ export default class DrupalClient {
             : relationships ? consumer(resource, relationships) : consumer(resource));
         }
         const decoratedConsumer = self.decorateWithRelationships(queuedConsumer, relationships);
-        const filteringConsumer = resource => {
-          return (resource) ? decoratedConsumer(resource) : null;
-        };
         return new Promise((resolve, reject) => {
           const f = next => {
             if (next) {
               // @note: using async/await for this 'then' caused browser crashes.
               next.then(resource => {
-                filteringConsumer(resource);
+                if (resource ) decoratedConsumer(resource);
                 f(cursor.next().value);
               }).catch(reject);
             } else {
-              if (preserveOrder) {
-                Promise.all(queue).then(() => {
-                  resolve(cursor.canContinue() ? cursor.addMore : false);
-                });
-              }
-              else {
+              Promise.all(queue).then(() => {
                 resolve(cursor.canContinue() ? cursor.addMore : false);
-              }
+              }).catch(reject);
             }
           };
           f(cursor.next().value);
@@ -179,18 +175,24 @@ export default class DrupalClient {
     return decorated;
   }
 
-  fetchDocument(url) {
-    const options = this.authorization ? {headers: new Headers({authorization: this.authorization})} : {};
+  fetchDocument(url, headers = {}, overrides = {}) {
+    const options = Object.assign({
+      headers: new Headers(Object.assign({
+        'accept': 'application/vnd.api+json',
+      }, headers)),
+      //})),
+    }, overrides);
+    if (this.authorization) {
+      options.headers.set('authorization', this.authorization);
+    }
     return fetch(url, options).then(res => {
       if (res.ok) {
         return res.json();
       }
       else {
-        reject(res.statusText);
-        //return new Promise(async (resolve, reject) => {
-        //  //let doc = await res.json().catch(() => reject(res.statusText));
-        //  reject(doc);
-        //});
+        return new Promise(async (_, reject) => {
+          reject(await res.json().catch(() => { reject(res.statusText); }));
+        });
       }
     });
   }
@@ -206,7 +208,17 @@ export default class DrupalClient {
     }
   }
 
-  getLink(type) {
+  getLink(type, headers = {}, options = {}) {
+    if (!this.links) {
+      this.links = new Promise((resolve, reject) => {
+        this.fetchDocument(`${this.baseUrl}/jsonapi`, headers, options)
+          .then(doc => resolve(doc.links || {}))
+          .catch(err => {
+            this.logger.log('Unable to resolve resource links.');
+            reject(err);
+          });
+      });
+    }
     return this.links.then(links => {
       if (!links.hasOwnProperty(type)) {
         Promise.reject(`'${type}' is not a valid type for ${this.baseUrl}.`);
@@ -224,7 +236,10 @@ export default class DrupalClient {
     query += filter.length ? `?${filter}` : '';
     query += sort.length ? `${query.length ? '&' : '?'}sort=${sort}` : '';
     query += page.length ? `${query.length ? '&' : '?'}${page}` : '';
-    return `${await this.getLink(type)}${query}`;
+    const headers = {
+      'x-push-please': `.links.${type}${query}`,
+    }
+    return `${await this.getLink(type, headers, {credentials: 'include'})}${query}`;
   }
 
 }
