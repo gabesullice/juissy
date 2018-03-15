@@ -6,33 +6,46 @@ const client = new DClient('https://jsonapi.test', {
 
 (async () => {
   const options = {
+    limit: 5,
     sort: '-title',
     relationships: {
+      image: {
+        field: 'field_image',
+        anticipate: {
+          file: '.data.attributes.url',
+        },
+      },
       tags: {
         field: 'field_tags',
         relationships: {
-          vocabulary: 'vid'
+          vocabulary: 'vid',
         },
       },
-    }
+    },
   };
-  //options.filter = filter.compile({paramOne: 'easy'});
-  (await client.all('node--recipe', options)).consume(logRecipe('Initial'));
-})()
+  (await client.all('node--recipe', options)).consume(
+    logRecipe('Initial'),
+    true,
+  );
+})();
 
+//options.filter = filter.compile({paramOne: 'easy'});
 const filter = client.filter((c, param) => {
   return c.and(
     c('status', 1),
-    c.or(
-      c.contains('title', param('paramOne')),
-      c.startsWith('title', 'Thai')
-    ),
+    c.or(c.contains('title', param('paramOne')), c.startsWith('title', 'Thai')),
   );
 });
 
 const logRecipe = label => async (recipe, relationships) => {
   let tags = [];
   let vocabs = [];
+  let images = [];
+
+  await relationships.image.consume(async image => {
+    images.push(image.attributes.url);
+  });
+
   await relationships.tags.consume(async (tag, relationships) => {
     tags.push(tag.attributes.name);
 
@@ -41,12 +54,14 @@ const logRecipe = label => async (recipe, relationships) => {
     });
   });
 
-  console.groupCollapsed(`${label}: ${recipe.attributes.title}`);
-  console.log('Dish:', recipe.attributes.title);
-  console.log('Tags:', tags.length ? tags.join(', '): 'n/a');
-  console.log('Vocabularies:', vocabs.length ? vocabs.join(', '): 'n/a');
-  console.groupEnd(`${label}: ${recipe.attributes.title}`);
-}
+  const ul = document.getElementById('recipes');
+  const li = document.createElement('li');
+  const img = document.createElement('img');
+  images.forEach(src => (img.src = src));
+  li.appendChild(img);
+  li.appendChild(document.createTextNode(recipe.attributes.title));
+  ul.appendChild(li);
+};
 
 //client.get('node--recipe', '25c048b6-69e9-46f4-986d-4b80b01de2e6')
 //  .then(logResourceAs('Individual'))

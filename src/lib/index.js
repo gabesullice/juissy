@@ -1,11 +1,14 @@
 import Filter from './filters.js';
 
 export default class DrupalClient {
-
-  constructor(baseUrl, {logger = console, authorization = null} = {}) {
+  constructor(baseUrl, { logger = console, authorization = null } = {}) {
     this.baseUrl = baseUrl;
     this.logger = logger;
     this.authorization = authorization;
+    this.links = Promise.resolve({
+      'node--recipe': '/jsonapi/node/recipe',
+    });
+    this.cache = {};
   }
 
   async get(type, id) {
@@ -13,23 +16,32 @@ export default class DrupalClient {
     return this.documentData(await this.fetchDocument(link));
   }
 
-  async all(type, { limit = -1, sort = '', filter = '', relationships = null} = {}) {
-    let link = await this.collectionLink(type, {sort, filter, page: 'page[limit]=50'});
+  async all(
+    type,
+    { limit = -1, sort = '', filter = '', relationships = null } = {},
+  ) {
+    let link = await this.collectionLink(type, {
+      sort,
+      filter,
+      page: 'page[limit]=50',
+    });
     let expanded = this.expandRelationships(relationships);
     return this.paginate(link, limit, expanded);
   }
 
   expandRelationships(relationships) {
-    const expander = (node) => {
-      return typeof node === 'string'
-        ? {field: node}
-        : node;
+    const expander = node => {
+      return typeof node === 'string' ? { field: node } : node;
     };
     const objectMapper = (node, mapper, initial) => {
       return Object.getOwnPropertyNames(node).reduce((mapped, prop) => {
         mapped[prop] = mapper(node[prop]);
         if (node[prop].relationships) {
-          mapped[prop].relationships = objectMapper(node[prop].relationships, mapper, {})
+          mapped[prop].relationships = objectMapper(
+            node[prop].relationships,
+            mapper,
+            {},
+          );
         }
         return mapped;
       }, {});
@@ -44,11 +56,26 @@ export default class DrupalClient {
 
     const headers = {};
     if (relationships) {
-      //&& relationships.tags && relationships.tags.field === 'field_tags') {
       const paths = [];
-      Object.getOwnPropertyNames(relationships).forEach(name => {
-        paths.push(`.data.[].relationships.${relationships[name].field}.links.related`);
-      });
+      paths.push(`.links.next`);
+      const addPaths = relationships => {
+        Object.getOwnPropertyNames(relationships).forEach(name => {
+          paths.push(
+            `.data.[].relationships.${relationships[name].field}.links.related`,
+          );
+          if (relationships[name].anticipate) {
+            Object.getOwnPropertyNames(relationships[name].anticipate).forEach(
+              key => {
+                paths.push(relationships[name].anticipate[key]);
+              },
+            );
+          }
+          if (relationships[name].relationships) {
+            addPaths(relationships[name].relationships);
+          }
+        });
+      };
+      addPaths(relationships);
       if (paths.length) {
         headers['x-push-please'] = paths.join('; ');
       }
@@ -61,7 +88,7 @@ export default class DrupalClient {
         link = doc.links.next || false;
         const data = this.documentData(doc);
         const resources = Array.isArray(data) ? data : [data];
-        total += (resources) ? resources.length : 0;
+        total += resources ? resources.length : 0;
         buffer.push(...(resources || []));
         return Promise.resolve(buffer);
       });
@@ -80,15 +107,18 @@ export default class DrupalClient {
     let count = 0;
     const cursor = (function*() {
       while (buffer.length || inFlight.size || link) {
-        yield limit === -1 || count < limit ? advance().then(buffer => {
-          count++;
-          const resource = buffer.shift();
-          return resource || null;
-        }) : false;
+        yield limit === -1 || count < limit
+          ? advance().then(buffer => {
+              count++;
+              const resource = buffer.shift();
+              return resource || null;
+            })
+          : false;
       }
     })();
     cursor.canContinue = () => buffer.length || inFlight.size || link;
-    cursor.addMore = (many = -1) => many === -1 ? (limit = -1) : (limit += many);
+    cursor.addMore = (many = -1) =>
+      many === -1 ? (limit = -1) : (limit += many);
 
     if (link && !inFlight.has(link) && (limit === -1 || total < limit)) {
       collectionRequests.push(doRequest(link));
@@ -103,25 +133,38 @@ export default class DrupalClient {
       consume: function(consumer, preserveOrder = false) {
         const queue = [];
         const queuedConsumer = (resource, relationships) => {
-          queue.push(preserveOrder
-            ? () => {
-              return relationships ? consumer(resource, relationships) : consumer(resource);
-            }
-            : relationships ? consumer(resource, relationships) : consumer(resource));
-        }
-        const decoratedConsumer = self.decorateWithRelationships(queuedConsumer, relationships);
+          queue.push(
+            preserveOrder
+              ? () => {
+                  return relationships
+                    ? consumer(resource, relationships)
+                    : consumer(resource);
+                }
+              : relationships
+                ? consumer(resource, relationships)
+                : consumer(resource),
+          );
+        };
+        const decoratedConsumer = self.decorateWithRelationships(
+          queuedConsumer,
+          relationships,
+        );
         return new Promise((resolve, reject) => {
           const f = next => {
             if (next) {
               // @note: using async/await for this 'then' caused browser crashes.
-              next.then(resource => {
-                if (resource ) decoratedConsumer(resource);
-                f(cursor.next().value);
-              }).catch(reject);
+              next
+                .then(resource => {
+                  if (resource) decoratedConsumer(resource);
+                  f(cursor.next().value);
+                })
+                .catch(reject);
             } else {
-              Promise.all(queue).then(() => {
-                resolve(cursor.canContinue() ? cursor.addMore : false);
-              }).catch(reject);
+              Promise.all(queue)
+                .then(() => {
+                  resolve(cursor.canContinue() ? cursor.addMore : false);
+                })
+                .catch(reject);
             }
           };
           f(cursor.next().value);
@@ -144,54 +187,75 @@ export default class DrupalClient {
   }
 
   debugger() {
-    return (error) => {
+    return error => {
       // @todo: this should actually check for errors.jsonapi
       if (error.errors) {
         const logError = error => {
-          this.logger.info(`${error.title}: ${error.detail}. %s`, error.links.info);
-        }
+          this.logger.info(
+            `${error.title}: ${error.detail}. %s`,
+            error.links.info,
+          );
+        };
         error.errors.forEach(logError);
-      }
-      else {
+      } else {
         //this.logger.log(error);
       }
-    }
+    };
   }
 
   decorateWithRelationships(consumer, relationships = null) {
     const decorated = !relationships
       ? consumer
       : resource => {
-        const mirror = {};
-        Object.getOwnPropertyNames(relationships).forEach(relationship => {
-          const target = relationships[relationship];
-          let path = [], link;
-          mirror[relationship] = (link = extractValue(`relationships.${target.field}.links.related`, resource))
-            ? this.paginate(link, target.limit || -1, target.relationships || null)
-            : Promise.reject();
-        });
-        return consumer(resource, mirror);
-      };
+          const mirror = {};
+          Object.getOwnPropertyNames(relationships).forEach(relationship => {
+            const target = relationships[relationship];
+            let path = [],
+              link;
+            mirror[relationship] = (link = extractValue(
+              `relationships.${target.field}.links.related`,
+              resource,
+            ))
+              ? this.paginate(
+                  link,
+                  target.limit || -1,
+                  target.relationships || null,
+                )
+              : Promise.reject();
+          });
+          return consumer(resource, mirror);
+        };
     return decorated;
   }
 
   fetchDocument(url, headers = {}, overrides = {}) {
-    const options = Object.assign({
-      headers: new Headers(Object.assign({
-        'accept': 'application/vnd.api+json',
-      }, headers)),
-      //})),
-    }, overrides);
+    const options = Object.assign(
+      {
+        headers: new Headers(
+          Object.assign(
+            {
+              accept: 'application/vnd.api+json',
+            },
+            headers,
+          ),
+        ),
+        credentials: 'include',
+      },
+      overrides,
+    );
     if (this.authorization) {
       options.headers.set('authorization', this.authorization);
     }
     return fetch(url, options).then(res => {
       if (res.ok) {
         return res.json();
-      }
-      else {
+      } else {
         return new Promise(async (_, reject) => {
-          reject(await res.json().catch(() => { reject(res.statusText); }));
+          reject(
+            await res.json().catch(() => {
+              reject(res.statusText);
+            }),
+          );
         });
       }
     });
@@ -204,21 +268,13 @@ export default class DrupalClient {
     if (doc.hasOwnProperty('errors')) {
       throw new Error(doc);
     } else {
-      throw new Error('The server returned an unprocessable document with no data or errors.');
+      throw new Error(
+        'The server returned an unprocessable document with no data or errors.',
+      );
     }
   }
 
   getLink(type, headers = {}, options = {}) {
-    if (!this.links) {
-      this.links = new Promise((resolve, reject) => {
-        this.fetchDocument(`${this.baseUrl}/jsonapi`, headers, options)
-          .then(doc => resolve(doc.links || {}))
-          .catch(err => {
-            this.logger.log('Unable to resolve resource links.');
-            reject(err);
-          });
-      });
-    }
     return this.links.then(links => {
       if (!links.hasOwnProperty(type)) {
         Promise.reject(`'${type}' is not a valid type for ${this.baseUrl}.`);
@@ -231,19 +287,23 @@ export default class DrupalClient {
     return new Filter(f);
   }
 
-  async collectionLink(type, {sort, filter, page} = {}) {
+  async collectionLink(type, { sort, filter, page } = {}) {
     let query = '';
     query += filter.length ? `?${filter}` : '';
     query += sort.length ? `${query.length ? '&' : '?'}sort=${sort}` : '';
     query += page.length ? `${query.length ? '&' : '?'}${page}` : '';
-    const headers = {
-      'x-push-please': `.links.${type}${query}`,
-    }
-    return `${await this.getLink(type, headers, {credentials: 'include'})}${query}`;
+    return `${await this.getLink(
+      type /*, headers, {credentials: 'include'}*/,
+    )}${query}`;
   }
-
 }
 
 function extractValue(path, obj) {
-  return path.split('.').reduce((exists, part) => exists && exists.hasOwnProperty(part) ? exists[part] : false, obj);
+  return path
+    .split('.')
+    .reduce(
+      (exists, part) =>
+        exists && exists.hasOwnProperty(part) ? exists[part] : false,
+      obj,
+    );
 }
