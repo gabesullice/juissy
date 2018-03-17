@@ -1,7 +1,7 @@
 import Filter from './lib/filters.js';
 
 export default class JuissyClient {
-  constructor(baseUrl, { logger = console, authorization = null } = {}) {
+  constructor(baseUrl, {logger = console, authorization = null} = {}) {
     this.baseUrl = baseUrl;
     this.logger = logger;
     this.authorization = authorization;
@@ -16,7 +16,7 @@ export default class JuissyClient {
     return this.documentData(await this.fetchDocument(link));
   }
 
-  async all(
+  async findAll(
     type,
     { limit = -1, sort = '', filter = '', relationships = {} } = {},
   ) {
@@ -274,7 +274,7 @@ export default class JuissyClient {
     }
   }
 
-  getLink(type, headers = {}, options = {}) {
+  getLink(type, options = {}) {
     return this.links.then(links => {
       if (!links.hasOwnProperty(type)) {
         Promise.reject(`'${type}' is not a valid type for ${this.baseUrl}.`);
@@ -296,6 +296,19 @@ export default class JuissyClient {
       type /*, headers, {credentials: 'include'}*/,
     )}${query}`;
   }
+
+  enableResolver(enable = true) {
+    this.resolve = enable ? async (path) => {
+      try {
+        headers['x-push-please'] = '.jsonapi.individual';
+        const resolution = await this.fetchDocument(`${this.baseUrl}/router/translate-path?path=${path}`, headers);
+      } catch (e) {
+        throw new Error(resolution.message);
+      }
+      return this.get(resolution.jsonapi.resourceName, resolution.entity.uuid);
+    } : undefined;
+  }
+
 }
 
 function extractValue(path, obj) {
