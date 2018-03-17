@@ -1,6 +1,6 @@
-import Filter from './filters.js';
+import Filter from './lib/filters.js';
 
-export default class DrupalClient {
+export default class DClient {
   constructor(baseUrl, { logger = console, authorization = null } = {}) {
     this.baseUrl = baseUrl;
     this.logger = logger;
