@@ -5,9 +5,10 @@ export default class JuissyClient {
     this.baseUrl = baseUrl;
     this.logger = logger;
     this.authorization = authorization;
-    this.links = Promise.resolve({
-      'node--post': '/jsonapi/node/post',
-    });
+    this.links = this.fetchLinks()
+    //this.links = Promise.resolve({
+    //  'node--post': '/jsonapi/node/post',
+    //});
     this.cache = {};
     if (enableExperimentalRouteResolver) {
       this.enableExperimentalRouteResolver();
@@ -284,6 +285,12 @@ export default class JuissyClient {
       }
       return this.baseUrl + links[type];
     });
+  }
+
+  fetchLinks() {
+    return this.fetchDocument(`${this.baseUrl}/jsonapi`)
+      .then(doc => doc.links)
+      .catch(this.debugger());
   }
 
   filter(f) {
