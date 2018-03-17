@@ -6,7 +6,7 @@ export default class DrupalClient {
     this.logger = logger;
     this.authorization = authorization;
     this.links = Promise.resolve({
-      'node--recipe': '/jsonapi/node/recipe',
+      'node--post': '/jsonapi/node/post',
     });
     this.cache = {};
   }
@@ -18,7 +18,7 @@ export default class DrupalClient {
 
   async all(
     type,
-    { limit = -1, sort = '', filter = '', relationships = null } = {},
+    { limit = -1, sort = '', filter = '', relationships = {} } = {},
   ) {
     let link = await this.collectionLink(type, {
       sort,
@@ -279,7 +279,7 @@ export default class DrupalClient {
       if (!links.hasOwnProperty(type)) {
         Promise.reject(`'${type}' is not a valid type for ${this.baseUrl}.`);
       }
-      return links[type];
+      return this.baseUrl + links[type];
     });
   }
 
