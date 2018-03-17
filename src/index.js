@@ -302,6 +302,7 @@ export default class JuissyClient {
       try {
         const headers = {
           'x-push-please': '.jsonapi.individual',
+          'accept': 'application/json',
         };
         const resolution = await this.fetchDocument(`${this.baseUrl}/router/translate-path?path=${path}`, headers);
       } catch (resolution) {
