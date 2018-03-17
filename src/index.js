@@ -1,7 +1,7 @@
 import Filter from './lib/filters.js';
 
 export default class JuissyClient {
-  constructor(baseUrl, {logger = console, authorization = null} = {}) {
+  constructor(baseUrl, {logger = console, authorization = null, enableExperimentalRouteResolver = false} = {}) {
     this.baseUrl = baseUrl;
     this.logger = logger;
     this.authorization = authorization;
@@ -9,6 +9,9 @@ export default class JuissyClient {
       'node--post': '/jsonapi/node/post',
     });
     this.cache = {};
+    if (enableExperimentalRouteResolver) {
+      this.enableExperimentalRouteResolver();
+    }
   }
 
   async get(type, id) {
@@ -297,7 +300,7 @@ export default class JuissyClient {
     )}${query}`;
   }
 
-  enableResolver(enable = true) {
+  enableExperimentalRouteResolver(enable = true) {
     this.resolve = enable ? async (path) => {
       try {
         const headers = {
