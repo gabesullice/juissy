@@ -305,10 +305,10 @@ export default class JuissyClient {
           'accept': 'application/json',
         };
         const resolution = await this.fetchDocument(`${this.baseUrl}/router/translate-path?path=${path}&_format=json`, headers);
+        return this.get(resolution.jsonapi.resourceName, resolution.entity.uuid);
       } catch (resolution) {
         throw new Error(resolution.message);
       }
-      return this.get(resolution.jsonapi.resourceName, resolution.entity.uuid);
     } : undefined;
   }
 
