@@ -6,9 +6,6 @@ export default class JuissyClient {
     this.logger = logger;
     this.authorization = authorization;
     this.links = this.fetchLinks()
-    //this.links = Promise.resolve({
-    //  'node--post': '/jsonapi/node/post',
-    //});
     this.cache = {};
     if (enableExperimentalRouteResolver) {
       this.enableExperimentalRouteResolver();
@@ -283,7 +280,7 @@ export default class JuissyClient {
       if (!links.hasOwnProperty(type)) {
         Promise.reject(`'${type}' is not a valid type for ${this.baseUrl}.`);
       }
-      return this.baseUrl + links[type];
+      return links[type];
     });
   }
 
