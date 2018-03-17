@@ -300,9 +300,11 @@ export default class JuissyClient {
   enableResolver(enable = true) {
     this.resolve = enable ? async (path) => {
       try {
-        headers['x-push-please'] = '.jsonapi.individual';
+        const headers = {
+          'x-push-please': '.jsonapi.individual',
+        };
         const resolution = await this.fetchDocument(`${this.baseUrl}/router/translate-path?path=${path}`, headers);
-      } catch (e) {
+      } catch (resolution) {
         throw new Error(resolution.message);
       }
       return this.get(resolution.jsonapi.resourceName, resolution.entity.uuid);
