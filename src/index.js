@@ -1,6 +1,6 @@
 import Filter from './lib/filters.js';
 
-export default class DClient {
+export default class JuissyClient {
   constructor(baseUrl, { logger = console, authorization = null } = {}) {
     this.baseUrl = baseUrl;
     this.logger = logger;

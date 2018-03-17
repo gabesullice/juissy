@@ -1,7 +1,7 @@
-d'Client
+Juissy
 ====
 
-d'Client is a minimal experimental JSON API client for Drupal.
+Juissy is a minimal experimental JSON API client for Drupal.
 
 ### Features:
 - Zero-configuration
@@ -12,7 +12,7 @@ d'Client is a minimal experimental JSON API client for Drupal.
 ### Example:
 ```js
 // A client only needs a base URL. It doesn't need to know anything else!
-const client = new DClient('http://jsonapi.test:8080');
+const client = new JuissyClient('http://jsonapi.test:8080');
 
 // It's best to read the code beneath these comments, then fill in your gaps in
 // understading with these comments.
