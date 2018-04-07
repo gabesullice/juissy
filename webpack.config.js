@@ -14,7 +14,7 @@ const productionPluginDefine =
 
 module.exports = [
   {
-    entry: './src/index.js',
+    entry: ['@babel/polyfill', './src/index.js'],
     output: {
       filename: 'index.js',
       path: path.resolve(__dirname, 'lib'),
