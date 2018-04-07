@@ -1,11 +1,18 @@
 import Filter from './lib/filters.js';
 
 export default class JuissyClient {
-  constructor(baseUrl, {logger = console, authorization = null, enableExperimentalRouteResolver = false} = {}) {
+  constructor(
+    baseUrl,
+    {
+      logger = console,
+      authorization = null,
+      enableExperimentalRouteResolver = false,
+    } = {},
+  ) {
     this.baseUrl = baseUrl;
     this.logger = logger;
     this.authorization = authorization;
-    this.links = this.fetchLinks()
+    this.links = this.fetchLinks();
     this.cache = {};
     if (enableExperimentalRouteResolver) {
       this.enableExperimentalRouteResolver();
@@ -19,7 +26,13 @@ export default class JuissyClient {
 
   async findAll(
     type,
-    { limit = -1, sort = '', filter = '', attributes = null, relationships = {} } = {},
+    {
+      limit = -1,
+      sort = '',
+      filter = '',
+      attributes = null,
+      relationships = {},
+    } = {},
   ) {
     let link = await this.collectionLink(type, {
       sort,
@@ -299,7 +312,9 @@ export default class JuissyClient {
     let query = '';
     query += filter.length ? `?${filter}` : '';
     query += sort.length ? `${query.length ? '&' : '?'}sort=${sort}` : '';
-    query += attributes ? `${query.length ? '&' : '?'}fields[${type}]=${attributes.join(',')}` : '';
+    query += attributes
+      ? `${query.length ? '&' : '?'}fields[${type}]=${attributes.join(',')}`
+      : '';
     query += page.length ? `${query.length ? '&' : '?'}${page}` : '';
     return `${await this.getLink(
       type /*, headers, {credentials: 'include'}*/,
@@ -307,20 +322,27 @@ export default class JuissyClient {
   }
 
   enableExperimentalRouteResolver(enable = true) {
-    this.resolve = enable ? async (path) => {
-      try {
-        const headers = {
-          'x-push-please': '.jsonapi.individual',
-          'accept': 'application/json',
-        };
-        const resolution = await this.fetchDocument(`${this.baseUrl}/router/translate-path?path=${path}&_format=json`, headers);
-        return this.get(resolution.jsonapi.resourceName, resolution.entity.uuid);
-      } catch (resolution) {
-        throw new Error(resolution.message);
-      }
-    } : undefined;
+    this.resolve = enable
+      ? async path => {
+          try {
+            const headers = {
+              'x-push-please': '.jsonapi.individual',
+              accept: 'application/json',
+            };
+            const resolution = await this.fetchDocument(
+              `${this.baseUrl}/router/translate-path?path=${path}&_format=json`,
+              headers,
+            );
+            return this.get(
+              resolution.jsonapi.resourceName,
+              resolution.entity.uuid,
+            );
+          } catch (resolution) {
+            throw new Error(resolution.message);
+          }
+        }
+      : undefined;
   }
-
 }
 
 function extractValue(path, obj) {
