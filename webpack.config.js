@@ -32,8 +32,8 @@ module.exports = [
               'transform-class-properties',
               'transform-object-rest-spread',
               ['@babel/transform-runtime', {
-                "helpers": false,
-                "polyfill": false,
+                "helpers": true,
+                "polyfill": true,
                 "regenerator": true,
                 "moduleName": "babel-runtime"
               }]
@@ -43,7 +43,6 @@ module.exports = [
                 '@babel/preset-env',
                 {
                   forceAllTransforms: true,
-                  modules: false,
                   targets: {
                     browsers: [
                       'chrome >= 62',
