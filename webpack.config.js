@@ -36,7 +36,6 @@ module.exports = [
               [
                 '@babel/preset-env',
                 {
-                  modules: false,
                   targets: {
                     uglify: true,
                     browsers: [
