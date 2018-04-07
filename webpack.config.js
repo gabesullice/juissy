@@ -31,12 +31,12 @@ module.exports = [
               'transform-private-underscore',
               'transform-class-properties',
               'transform-object-rest-spread',
-              //['@babel/transform-runtime', {
-              //  "helpers": true,
-              //  "polyfill": true,
-              //  "regenerator": true,
-              //  "moduleName": "babel-runtime"
-              //}]
+              ['@babel/transform-runtime', {
+                "helpers": false,
+                "polyfill": false,
+                "regenerator": true,
+                "moduleName": "babel-runtime"
+              }]
             ],
             presets: [
               [
