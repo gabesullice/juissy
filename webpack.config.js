@@ -38,6 +38,7 @@ module.exports = [
                 {
                   modules: false,
                   targets: {
+                    uglify: true,
                     browsers: [
                       'chrome >= 62',
                       'edge >= 15',
