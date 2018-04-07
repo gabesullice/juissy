@@ -19,11 +19,12 @@ export default class JuissyClient {
 
   async findAll(
     type,
-    { limit = -1, sort = '', filter = '', relationships = {} } = {},
+    { limit = -1, sort = '', filter = '', attributes = null, relationships = {} } = {},
   ) {
     let link = await this.collectionLink(type, {
       sort,
       filter,
+      attributes,
       page: limit === -1 || limit > 50 ? '' : `page[limit]=${limit}`,
     });
     let expanded = this.expandRelationships(relationships);
@@ -294,10 +295,11 @@ export default class JuissyClient {
     return new Filter(f);
   }
 
-  async collectionLink(type, { sort, filter, page } = {}) {
+  async collectionLink(type, { sort, filter, page, attributes } = {}) {
     let query = '';
     query += filter.length ? `?${filter}` : '';
     query += sort.length ? `${query.length ? '&' : '?'}sort=${sort}` : '';
+    query += attributes ? `${query.length ? '&' : '?'}fields[${type}]=${attributes.join(',')}` : '';
     query += page.length ? `${query.length ? '&' : '?'}${page}` : '';
     return `${await this.getLink(
       type /*, headers, {credentials: 'include'}*/,
