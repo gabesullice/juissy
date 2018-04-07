@@ -42,7 +42,7 @@ module.exports = [
               [
                 '@babel/preset-env',
                 {
-                  //forceAllTransforms: true,
+                  forceAllTransforms: true,
                   useBuiltIns: false,
                   //modules: false,
                   targets: {
