@@ -32,8 +32,8 @@ module.exports = [
               'transform-class-properties',
               'transform-object-rest-spread',
               ['@babel/transform-runtime', {
-                "helpers": true,
-                "polyfill": true,
+                "helpers": false,
+                "polyfill": false,
                 "regenerator": true,
                 "moduleName": "babel-runtime"
               }]
