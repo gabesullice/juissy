@@ -24,7 +24,7 @@ export default class JuissyClient {
     let link = await this.collectionLink(type, {
       sort,
       filter,
-      page: 'page[limit]=50',
+      page: limit === -1 || limit > 50 ? '' : `page[limit]=${limit}`,
     });
     let expanded = this.expandRelationships(relationships);
     return this.paginate(link, limit, expanded);
