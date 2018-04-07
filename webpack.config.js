@@ -42,6 +42,7 @@ module.exports = [
               [
                 '@babel/preset-env',
                 {
+                  forceAllTransforms: true,
                   targets: {
                     browsers: [
                       'chrome >= 62',
