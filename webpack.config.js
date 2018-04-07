@@ -31,13 +31,18 @@ module.exports = [
               'transform-private-underscore',
               'transform-class-properties',
               'transform-object-rest-spread',
+              ['@babel/transform-runtime', {
+                "helpers": false,
+                "polyfill": false,
+                "regenerator": true,
+                "moduleName": "babel-runtime"
+              }]
             ],
             presets: [
               [
                 '@babel/preset-env',
                 {
                   targets: {
-                    uglify: true,
                     browsers: [
                       'chrome >= 62',
                       'edge >= 15',
