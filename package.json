@@ -1,6 +1,6 @@
 {
   "name": "juissy",
-  "version": "2.0.x",
+  "version": "2.0.0-dev",
   "main": "lib",
   "license": "MIT",
   "repository": {
