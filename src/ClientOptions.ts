@@ -1,10 +1,21 @@
+import {
+  OperationProvider,
+} from './Operations';
+
 export type ClientOption = (opts: ClientOptions) => ClientOptions;
 
 export class Opt {
 
-  entryPoint(url: string): ClientOption {
+  static entryPoint(url: string): ClientOption {
     return function (opts: ClientOptions): ClientOptions {
       opts.entryPoint = url;
+      return opts;
+    }
+  }
+
+  static addOperationProvider(provider: OperationProvider): ClientOption {
+    return function (opts: ClientOptions): ClientOptions {
+      opts.operationProviders.push(provider);
       return opts;
     }
   }
@@ -14,5 +25,9 @@ export class Opt {
 export class ClientOptions {
 
   entryPoint: string|null = null;
+
+  operationProviders: OperationProvider[] = [];
+
+  urls: {[index:string]: string} = {};
 
 }

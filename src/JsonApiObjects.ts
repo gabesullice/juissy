@@ -42,7 +42,7 @@ export interface ErrorObject extends LinkedObject, MetaDataObject {
   };
 }
 
-interface MetaDataObject {
+export interface MetaDataObject {
   meta?: MetaObject;
 }
 
@@ -50,7 +50,7 @@ export interface MetaObject {
   [index:string]: any;
 }
 
-interface LinkedObject {
+export interface LinkedObject {
   links?: LinksObject,
 }
 

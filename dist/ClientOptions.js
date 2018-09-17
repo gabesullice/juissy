@@ -10,9 +10,15 @@
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class Opt {
-        entryPoint(url) {
+        static entryPoint(url) {
             return function (opts) {
                 opts.entryPoint = url;
+                return opts;
+            };
+        }
+        static addOperationProvider(provider) {
+            return function (opts) {
+                opts.operationProviders.push(provider);
                 return opts;
             };
         }
@@ -21,6 +27,8 @@
     class ClientOptions {
         constructor() {
             this.entryPoint = null;
+            this.operationProviders = [];
+            this.urls = {};
         }
     }
     exports.ClientOptions = ClientOptions;

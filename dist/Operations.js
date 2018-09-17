@@ -10,8 +10,29 @@
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class OperationManager {
+        constructor(operator, providers) {
+            this.operator = operator;
+            this.providers = providers;
+        }
         parse(contextType, contextObject, links, doc) {
-            return new Operations([]);
+            let ops = [];
+            for (const name in links) {
+                if (links.hasOwnProperty(name)) {
+                    const link = links[name];
+                    ops = this.providers.reduce((ops, provider) => {
+                        const operation = provider.parse(contextType, contextObject, link, doc);
+                        if (operation !== null) {
+                            let named = [name.split(':')[0], operation];
+                            ops.push(named);
+                        }
+                        return ops;
+                    }, ops);
+                }
+            }
+            return new Operations(ops.map((operation) => {
+                const executable = [operation[0], new ExecutableOperation(this.operator, operation[1])];
+                return executable;
+            }));
         }
     }
     exports.OperationManager = OperationManager;
@@ -26,13 +47,55 @@
         constructor(ops) {
             this.operations = ops;
         }
+        getByName(name) {
+            return this.operations.filter(named => name === named[0]).map(named => named[1]);
+        }
         has(name) {
             return this.operations.reduce((has, op) => {
                 return has || op[0] === name;
             }, false);
         }
+        available() {
+            return Array.from(this.operations
+                .reduce((available, named) => available.add(named[0]), new Set())
+                .values());
+        }
     }
     exports.Operations = Operations;
+    class ExecutableOperation {
+        constructor(operator, operation) {
+            this.operator = operator;
+            this.innerOperation = operation;
+        }
+        do() {
+            return this.operator(this.innerOperation);
+        }
+        getUrl() {
+            return this.innerOperation.getUrl();
+        }
+        getMethod() {
+            return this.innerOperation.getMethod();
+        }
+        getOperationType() {
+            return this.innerOperation.getOperationType();
+        }
+        getAttributes() {
+            return this.innerOperation.getAttributes();
+        }
+        getRouteType() {
+            return this.innerOperation.getRouteType();
+        }
+        getData() {
+            return this.innerOperation.getData();
+        }
+        withData(data) {
+            return new ExecutableOperation(this.operator, this.innerOperation.withData(data));
+        }
+        needsData() {
+            return this.innerOperation.needsData();
+        }
+    }
+    exports.ExecutableOperation = ExecutableOperation;
     var Method;
     (function (Method) {
         Method["Get"] = "GET";
@@ -49,10 +112,9 @@
     })(OperationType = exports.OperationType || (exports.OperationType = {}));
     var RouteType;
     (function (RouteType) {
-        RouteType[RouteType["Individual"] = 0] = "Individual";
-        RouteType[RouteType["Related"] = 1] = "Related";
-        RouteType[RouteType["Relationship"] = 2] = "Relationship";
-        RouteType[RouteType["Collection"] = 3] = "Collection";
+        RouteType[RouteType["Unknown"] = 0] = "Unknown";
+        RouteType[RouteType["Individual"] = 1] = "Individual";
+        RouteType[RouteType["Collection"] = 2] = "Collection";
     })(RouteType = exports.RouteType || (exports.RouteType = {}));
 });
 //# sourceMappingURL=Operations.js.map
