@@ -24,7 +24,7 @@ import getDefaultProviders from './operations/DefaultProviders';
 
 type RequestOption = {};
 
-export class Client {
+export default class Client {
 
   protected initialized: Promise<boolean>;
 

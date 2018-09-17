@@ -93,6 +93,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
             });
         }
     }
-    exports.Client = Client;
+    exports.default = Client;
 });
 //# sourceMappingURL=Client.js.map
