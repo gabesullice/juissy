@@ -52,12 +52,12 @@ export class Result {
       return null;
     }
     else if (Array.isArray(doc.data)) {
-      return doc.data.map(obj => this.toResource(obj, doc, operationManager))
+      return doc.data.map(obj => Result.toResource(obj, doc, operationManager))
     }
-    return this.toResource(doc.data, doc, operationManager);
+    return Result.toResource(doc.data, doc, operationManager);
   }
 
-  protected toResource(obj: ResourceObject, doc: DataDocument, operationManager: OperationManager): Resource {
+  protected static toResource(obj: ResourceObject, doc: DataDocument, operationManager: OperationManager): Resource {
     const operations: Operations = obj.hasOwnProperty('links')
       ? operationManager.parse(ContextObjectType.Resource, obj, (obj.links as LinksObject), doc)
       : new Operations([]);

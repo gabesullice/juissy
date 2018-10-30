@@ -33,7 +33,7 @@ export default class Client {
   protected operationManager: OperationManager = new OperationManager(this.getOperator(), []);
 
   constructor(...opts: ClientOption[]) {
-    this.initialized = new Promise(async (resolve, reject) => {
+    this.initialized = new Promise(async resolve => {
       this.settings = await this.getOptions(opts);
       this.operationManager = new OperationManager(this.getOperator(), this.settings.operationProviders);
       resolve(true);
@@ -46,7 +46,7 @@ export default class Client {
 
   public async load(resourceType: string, id: string, ...opts: RequestOption[]): Promise<Resource> {
     await this.ready();
-    let result = await this.do(new Follow(this.getResourceUrl(resourceType, id), RouteType.Individual, null))
+    let result = await this.do(new Follow(this.getResourceUrl(resourceType, id), RouteType.Individual, null));
     return result.getData() as Resource;
   }
 
