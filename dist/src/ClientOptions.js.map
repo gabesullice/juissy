@@ -1,1 +1,0 @@
-{"version":3,"file":"ClientOptions.js","sourceRoot":"","sources":["../../src/ClientOptions.ts"],"names":[],"mappings":";;;;;;;;;;;IAEA,MAAa,GAAG;QAEd,UAAU,CAAC,GAAW;YACpB,OAAO,UAAU,IAAmB;gBAClC,IAAI,CAAC,UAAU,GAAG,GAAG,CAAC;gBACtB,OAAO,IAAI,CAAC;YACd,CAAC,CAAA;QACH,CAAC;KAEF;IATD,kBASC;IAED,MAAa,aAAa;QAA1B;YAEE,eAAU,GAAgB,IAAI,CAAC;QAEjC,CAAC;KAAA;IAJD,sCAIC"}
